@@ -1,0 +1,1971 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,user-scalable=no">
+<title>泡泡交互程序 v9.46</title>
+<style>
+:root{--panel-bg:rgba(10,20,50,0.65);--text:#d8e0f8;--accent:#60a0d8;}
+*{margin:0;padding:0;box-sizing:border-box;}
+html,body{width:100%;height:100%;overflow:hidden;background:linear-gradient(135deg,#fce4ec 0%,#f8bbd0 25%,#e8daf0 50%,#bbdefb 75%,#90caf9 100%);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;-webkit-tap-highlight-color:transparent;user-select:none;-webkit-user-select:none;}
+canvas{display:block;position:absolute;top:0;left:0;width:100%;height:100%;z-index:0;touch-action:none;}
+
+/* ===== 开始界面 ===== */
+#start-screen{position:fixed;inset:0;z-index:1000;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:0;
+  background:linear-gradient(160deg,#0a0e2a 0%,#1a1a4e 30%,#0d1b3e 60%,#1a0a2e 100%);
+  transition:opacity 0.7s cubic-bezier(0.4,0,0.2,1),transform 0.7s cubic-bezier(0.4,0,0.2,1);}
+#start-screen.hidden{opacity:0;transform:scale(1.03);pointer-events:none;}
+/* 星空背景粒子 */
+#start-screen .stars{position:absolute;inset:0;overflow:hidden;pointer-events:none;}
+#start-screen .star{position:absolute;border-radius:50%;background:#fff;animation:starTwinkle var(--dur) ease-in-out infinite;animation-delay:var(--delay);}
+@keyframes starTwinkle{0%,100%{opacity:0.3;transform:scale(1);}50%{opacity:1;transform:scale(1.6);}}
+/* 流动光斑 */
+#start-screen .orb{position:absolute;border-radius:50%;filter:blur(60px);pointer-events:none;animation:orbFloat var(--dur) ease-in-out infinite;}
+@keyframes orbFloat{0%,100%{transform:translate(0,0);}25%{transform:translate(var(--dx1),var(--dy1));}50%{transform:translate(var(--dx2),var(--dy2));}75%{transform:translate(var(--dx3),var(--dy3));}}
+/* 标题 */
+#start-screen .start-title{font-size:clamp(28px,5vw,48px);font-weight:700;color:#e0e8ff;text-align:center;text-shadow:0 0 60px rgba(130,170,255,0.4),0 0 120px rgba(160,120,220,0.3);letter-spacing:0.08em;position:relative;z-index:2;animation:titleFloat 3s ease-in-out infinite;}
+@keyframes titleFloat{0%,100%{transform:translateY(0);}50%{transform:translateY(-6px);}}
+#start-screen .start-subtitle{font-size:clamp(13px,2vw,16px);color:rgba(200,210,240,0.55);font-weight:300;text-align:center;letter-spacing:0.15em;position:relative;z-index:2;margin-top:-4px;}
+/* 输入区域 */
+#start-screen .start-input-wrap{position:relative;z-index:2;display:flex;align-items:center;gap:0;margin-top:28px;
+  background:rgba(255,255,255,0.06);backdrop-filter:blur(30px);-webkit-backdrop-filter:blur(30px);
+  border-radius:40px;border:1.5px solid rgba(255,255,255,0.18);padding:5px 5px 5px 24px;
+  box-shadow:0 8px 40px rgba(0,0,0,0.3),inset 0 1px 0 rgba(255,255,255,0.06);
+  transition:border-color 0.3s,box-shadow 0.3s;width:min(440px,85vw);}
+#start-screen .start-input-wrap:focus-within{border-color:rgba(130,170,255,0.55);box-shadow:0 8px 50px rgba(80,140,240,0.2),inset 0 1px 0 rgba(255,255,255,0.1);}
+#start-screen .start-icon{font-size:20px;flex-shrink:0;opacity:0.7;}
+#start-screen .start-input{flex:1;border:none;outline:none;background:transparent;color:#d8e0f8;font-size:16px;padding:12px 0;min-width:0;font-family:inherit;letter-spacing:0.04em;}
+#start-screen .start-input::placeholder{color:rgba(200,210,240,0.32);}
+#start-screen .start-btn{width:48px;height:48px;border-radius:50%;border:none;
+  background:linear-gradient(135deg,#6db3f2 0%,#9b7fd4 100%);color:#fff;font-size:22px;cursor:pointer;
+  flex-shrink:0;display:flex;align-items:center;justify-content:center;
+  transition:transform 0.25s,box-shadow 0.25s;
+  box-shadow:0 4px 20px rgba(110,160,240,0.4);}
+#start-screen .start-btn:hover{transform:scale(1.08);box-shadow:0 6px 30px rgba(130,180,255,0.5);}
+#start-screen .start-btn:active{transform:scale(0.94);}
+/* 提示文字 */
+#start-screen .start-hint{font-size:11px;color:rgba(200,210,240,0.35);margin-top:18px;position:relative;z-index:2;letter-spacing:0.06em;text-align:center;}
+/* 装饰泡泡 */
+#start-screen .deco-bubble{position:absolute;border-radius:50%;pointer-events:none;z-index:1;
+  background:radial-gradient(circle at 35% 30%,rgba(255,255,255,0.18),rgba(255,255,255,0.03) 60%,rgba(255,255,255,0) 100%);
+  border:1px solid rgba(255,255,255,0.06);
+  animation:decoBubbleFloat var(--dur) ease-in-out infinite;animation-delay:var(--delay);}
+@keyframes decoBubbleFloat{0%,100%{transform:translate(0,0) scale(1);}25%{transform:translate(var(--dx),var(--dy)) scale(1.04);}50%{transform:translate(calc(var(--dx)*0.3),calc(var(--dy)*1.6)) scale(0.96);}75%{transform:translate(calc(var(--dx)*-0.5),calc(var(--dy)*0.6)) scale(1.02);}}
+#camera-preview{position:fixed;top:16px;left:16px;width:180px;height:135px;border-radius:12px;border:2px solid rgba(255,255,255,0.6);z-index:50;object-fit:cover;opacity:0.75;transform:scaleX(-1);pointer-events:none;box-shadow:0 4px 16px rgba(0,0,0,0.15);}
+#hand-status{position:fixed;top:16px;left:210px;z-index:50;font-size:12px;color:var(--text);background:var(--panel-bg);backdrop-filter:blur(10px);padding:6px 12px;border-radius:8px;border:1px solid rgba(255,255,255,0.6);display:flex;align-items:center;gap:6px;opacity:0;transition:opacity 0.3s;}
+#hand-status.visible{opacity:1;}
+#hand-dot{width:8px;height:8px;border-radius:50%;background:#e74c3c;transition:background 0.3s;}
+#hand-dot.active{background:#2ecc71;}
+#panel{position:fixed;bottom:20px;right:20px;z-index:100;background:var(--panel-bg);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-radius:12px;padding:16px;color:var(--text);min-width:240px;max-width:300px;box-shadow:0 8px 32px rgba(0,0,0,0.3);border:1px solid rgba(255,255,255,0.25);transition:transform 0.3s,opacity 0.3s;}
+#panel.collapsed{transform:translateX(calc(100% + 40px));opacity:0;pointer-events:none;}
+#panel-toggle{position:fixed;bottom:20px;right:20px;z-index:101;width:44px;height:44px;border-radius:50%;border:1px solid rgba(255,255,255,0.3);background:rgba(10,20,50,0.65);color:var(--text);font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(20px);transition:transform 0.3s,opacity 0.3s;}
+
+/* ===== 问答系统样式 ===== */
+#question-bar{position:fixed;top:16px;left:50%;transform:translateX(-50%);z-index:90;display:flex;align-items:center;gap:8px;background:var(--panel-bg);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-radius:28px;padding:6px 6px 6px 20px;border:1px solid rgba(255,255,255,0.25);box-shadow:0 4px 24px rgba(0,0,0,0.15);min-width:320px;max-width:480px;}
+#question-input{flex:1;border:none;outline:none;background:transparent;color:var(--text);font-size:14px;padding:8px 0;min-width:0;font-family:inherit;}
+#question-input::placeholder{color:rgba(216,224,248,0.45);}
+#question-submit{width:36px;height:36px;border-radius:50%;border:none;background:linear-gradient(135deg,#60a0d8,#a078c0);color:#fff;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:transform 0.2s,box-shadow 0.2s;box-shadow:0 2px 12px rgba(96,160,216,0.35);}
+#question-submit:hover{transform:scale(1.08);box-shadow:0 4px 20px rgba(96,160,216,0.5);}
+#question-submit:active{transform:scale(0.95);}
+#question-bar{transition:transform 0.4s cubic-bezier(0.4,0,0.2,1),opacity 0.3s;}
+#question-bar.collapsed{transform:translateX(-50%) translateY(-120px);opacity:0;pointer-events:none;}
+#question-bar-hide-btn{width:26px;height:26px;border-radius:50%;border:none;background:rgba(255,255,255,0.1);color:rgba(216,224,248,0.45);font-size:16px;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center;transition:background 0.2s,color 0.2s;padding:0;line-height:1;}
+#question-bar-hide-btn:hover{background:rgba(255,255,255,0.22);color:#d8e0f8;}
+#question-bar-toggle{position:fixed;top:16px;left:50%;transform:translateX(-50%);z-index:91;width:36px;height:36px;border-radius:50%;border:1px solid rgba(255,255,255,0.25);background:rgba(10,20,50,0.55);color:var(--text);font-size:18px;cursor:pointer;display:none;align-items:center;justify-content:center;backdrop-filter:blur(10px);transition:transform 0.2s;box-shadow:0 4px 16px rgba(0,0,0,0.15);}
+#question-bar-toggle.visible{display:flex;}
+#question-bar-toggle:hover{transform:translateX(-50%) scale(1.12);}
+/* 返回首页按钮 */
+#back-to-start-btn{position:fixed;bottom:80px;left:50%;transform:translateX(-50%);z-index:85;width:52px;height:52px;border-radius:50%;border:1.5px solid rgba(255,255,255,0.25);background:rgba(10,20,50,0.5);color:var(--text);font-size:22px;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;backdrop-filter:blur(12px);transition:transform 0.2s,box-shadow 0.2s,border-color 0.2s;box-shadow:0 4px 16px rgba(0,0,0,0.12);padding:0;line-height:1;}
+#back-to-start-btn:hover{transform:translateX(-50%) scale(1.08);box-shadow:0 6px 24px rgba(0,0,0,0.22);border-color:rgba(255,255,255,0.45);}
+#back-to-start-btn:active{transform:translateX(-50%) scale(0.94);}
+.back-label{font-size:10px;color:rgba(216,224,248,0.45);position:absolute;bottom:-18px;white-space:nowrap;pointer-events:none;}
+#edit-answers-btn{position:fixed;top:16px;right:16px;z-index:91;width:36px;height:36px;border-radius:50%;border:1px solid rgba(255,255,255,0.3);background:rgba(10,20,50,0.55);color:var(--text);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(10px);transition:transform 0.2s,background 0.2s;}
+#edit-answers-btn:hover{transform:scale(1.1);background:rgba(10,20,50,0.75);}
+
+/* 答案卡片 */
+.answer-card{position:fixed;z-index:80;pointer-events:auto;cursor:pointer;transform:translate(-50%,-50%) scale(0);opacity:0;transition:transform 0.35s cubic-bezier(0.175,0.885,0.32,1.275),opacity 0.25s;}
+.answer-card.show{transform:translate(-50%,-50%) scale(1);opacity:1;}
+.answer-card.dismiss{transform:translate(-50%,calc(-50% - 50px)) scale(0.85);opacity:0;transition:transform 0.5s ease-in,opacity 0.4s;}
+.answer-card-inner{background:rgba(20,30,60,0.88);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);border-radius:18px;border:1px solid rgba(255,255,255,0.3);box-shadow:0 8px 40px rgba(0,0,0,0.3);padding:14px 18px;max-width:280px;text-align:center;}
+.answer-card-inner .answer-question{font-size:11px;color:rgba(200,210,235,0.6);margin-bottom:6px;font-style:italic;}
+.answer-card-inner .answer-content{font-size:15px;color:#e8eef8;font-weight:500;line-height:1.5;}
+.answer-card-inner img{max-width:200px;max-height:160px;border-radius:10px;display:block;margin:0 auto;}
+.answer-card-inner .answer-tip{font-size:10px;color:rgba(200,210,235,0.4);margin-top:8px;}
+
+/* 答案库编辑面板 */
+#editor-overlay{position:fixed;inset:0;z-index:200;background:rgba(0,0,0,0.55);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity 0.3s;}
+#editor-overlay.open{opacity:1;pointer-events:auto;}
+#editor-panel{background:rgba(15,25,55,0.94);backdrop-filter:blur(30px);-webkit-backdrop-filter:blur(30px);border-radius:18px;border:1px solid rgba(255,255,255,0.2);box-shadow:0 12px 60px rgba(0,0,0,0.5);width:420px;max-height:70vh;display:flex;flex-direction:column;overflow:hidden;}
+#editor-header{padding:16px 20px;border-bottom:1px solid rgba(255,255,255,0.1);display:flex;align-items:center;justify-content:space-between;}
+#editor-header h3{margin:0;font-size:16px;color:#d8e0f8;}
+#editor-close{width:32px;height:32px;border-radius:50%;border:1px solid rgba(255,255,255,0.2);background:rgba(255,255,255,0.08);color:#d8e0f8;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background 0.2s;}
+#editor-close:hover{background:rgba(255,80,80,0.3);}
+#editor-list{flex:1;overflow-y:auto;padding:12px 16px;display:flex;flex-direction:column;gap:8px;max-height:35vh;}
+.editor-answer-item{display:flex;align-items:center;gap:10px;padding:10px 14px;background:rgba(255,255,255,0.06);border-radius:10px;border:1px solid rgba(255,255,255,0.08);transition:background 0.2s;}
+.editor-answer-item:hover{background:rgba(255,255,255,0.1);}
+.editor-answer-type{font-size:10px;padding:2px 8px;border-radius:10px;font-weight:600;flex-shrink:0;}
+.editor-answer-type.text{background:rgba(96,160,216,0.3);color:#80c0f0;}
+.editor-answer-type.image{background:rgba(160,120,192,0.3);color:#c0a0e0;}
+.editor-answer-preview{flex:1;font-size:13px;color:#b8c8e0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.editor-answer-delete{width:26px;height:26px;border-radius:50%;border:none;background:rgba(255,80,80,0.2);color:#f08080;font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:background 0.2s;}
+.editor-answer-delete:hover{background:rgba(255,80,80,0.5);}
+#editor-form{padding:14px 20px;border-top:1px solid rgba(255,255,255,0.1);display:flex;gap:8px;flex-wrap:wrap;}
+#editor-type-select{flex-shrink:0;padding:8px 12px;border-radius:10px;border:1px solid rgba(255,255,255,0.2);background:rgba(255,255,255,0.08);color:#d8e0f8;font-size:13px;font-family:inherit;cursor:pointer;outline:none;}
+#editor-type-select option{background:#1a2a4a;color:#d8e0f8;}
+#editor-content-input{flex:1;min-width:160px;padding:8px 12px;border-radius:10px;border:1px solid rgba(255,255,255,0.2);background:rgba(255,255,255,0.08);color:#d8e0f8;font-size:13px;font-family:inherit;outline:none;transition:border-color 0.2s;}
+#editor-content-input:focus{border-color:rgba(96,160,216,0.6);}
+#editor-add-btn{padding:8px 18px;border-radius:10px;border:none;background:linear-gradient(135deg,#60a0d8,#a078c0);color:#fff;font-size:13px;font-weight:600;cursor:pointer;flex-shrink:0;transition:transform 0.2s,box-shadow 0.2s;}
+#editor-add-btn:hover{transform:translateY(-1px);box-shadow:0 4px 16px rgba(96,160,216,0.4);}
+#editor-add-btn:active{transform:scale(0.96);}
+</style>
+</head>
+<body>
+
+<!-- ===== 开始界面 ===== -->
+<div id="start-screen">
+  <!-- 星空 -->
+  <div class="stars" id="start-stars"></div>
+  <!-- 装饰泡泡容器 -->
+  <div id="start-deco-bubbles"></div>
+  <!-- 标题 -->
+  <div class="start-title">泡泡问答</div>
+  <div class="start-subtitle">BUBBLE ORACLE</div>
+  <!-- 输入区域 -->
+  <div class="start-input-wrap">
+    <span class="start-icon">🔮</span>
+    <input type="text" class="start-input" id="start-input" placeholder="写下你的问题，戳破泡泡寻找答案…" maxlength="120" autocomplete="off">
+    <button class="start-btn" id="start-btn">✨</button>
+  </div>
+  <!-- 提示 -->
+  <div class="start-hint">按 Enter 或点击按钮开始探索</div>
+</div>
+
+<canvas id="canvas"></canvas>
+<video id="camera-preview" autoplay playsinline></video>
+<div id="hand-status"><span id="hand-dot"></span><span id="hand-text">等待手势…</span></div>
+
+<!-- 问题输入栏 -->
+<div id="question-bar">
+  <span style="font-size:18px;flex-shrink:0;">🔮</span>
+  <input type="text" id="question-input" placeholder="输入你的问题…" maxlength="80">
+  <button id="question-submit" title="提问">✨</button>
+  <button id="question-bar-hide-btn" title="隐藏问题栏">−</button>
+</div>
+<button id="question-bar-toggle" title="显示问题栏">🔮</button>
+
+<!-- 返回首页按钮 -->
+<button id="back-to-start-btn" title="食指长按3秒或点击返回首页">🏠<span class="back-label">返回</span></button>
+
+<!-- 答案卡片容器 -->
+<div id="answers-container"></div>
+
+<!-- 答案库编辑按钮 -->
+<button id="edit-answers-btn" title="编辑答案库">📝</button>
+
+<!-- 答案库编辑面板 -->
+<div id="editor-overlay">
+  <div id="editor-panel">
+    <div id="editor-header">
+      <h3>📝 答案库编辑器</h3>
+      <button id="editor-close">✕</button>
+    </div>
+    <div id="editor-list"></div>
+    <div id="editor-form">
+      <select id="editor-type-select">
+        <option value="text">文字</option>
+        <option value="image">图片</option>
+      </select>
+      <input type="text" id="editor-content-input" placeholder="输入答案内容或图片URL…" maxlength="500">
+      <button id="editor-add-btn">添加</button>
+    </div>
+  </div>
+</div>
+
+<div id="panel">
+  <div style="font-size:13px;font-weight:600;margin-bottom:10px;color:#d8e0f8;">泡泡控制面板</div>
+  <div style="font-size:12px;margin-bottom:6px;color:#a8b8d8;">泡泡数量下限: <span id="count-display">10</span></div>
+  <input type="range" id="count-slider" min="10" max="30" value="10" style="width:100%;margin-bottom:10px;accent-color:#60a0d8;">
+  <div style="font-size:12px;margin-bottom:6px;color:#a8b8d8;">最小半径: <span id="minr-display">20</span></div>
+  <input type="range" id="minr-slider" min="10" max="50" value="20" style="width:100%;margin-bottom:10px;accent-color:#60a0d8;">
+  <div style="font-size:12px;margin-bottom:6px;color:#a8b8d8;">最大半径: <span id="maxr-display">80</span></div>
+  <input type="range" id="maxr-slider" min="40" max="150" value="80" style="width:100%;accent-color:#60a0d8;">
+</div>
+<div id="panel-toggle" class="visible">⚙</div>
+
+<!-- MediaPipe Hands -->
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.4.1675469240/hands.js" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils@0.3.1675466862/camera_utils.js" crossorigin="anonymous"></script>
+
+<script>
+// ============================================================
+//  CONFIG
+// ============================================================
+const CONFIG = {
+  MIN_COUNT: 10,
+  REPLENISH_DELAY: 600,
+  MAX_RADIUS: 80,
+  MIN_RADIUS: 20,
+  DEFAULT_RADIUS: 35,
+  RESTITUTION: 0.35,
+  VELOCITY_DAMPING: 0.9985,
+  MAX_SPEED: 6,
+  GROWTH_INTERVAL: 5000,
+  BURST_RADIUS: 80,
+  BUBBLE_COLORS: [
+    '#E8A0B8','#B068A0','#68A8D0','#A078C0','#D888A8',
+    '#5898C8','#D89888','#78B8A8','#C888B0','#88B8E0',
+    '#A8C0E0','#E0A0B8','#88C0A0','#B898D0','#D0A8B8',
+    '#60B0D8','#C888A0','#A0D0B8'
+  ],
+  DEFORM_VERTS: 48,
+  DEFORM_SPRING: 0.04,
+  DEFORM_DAMPING: 0.82,
+  DEFORM_MAX_DISP: 1.3,
+  DEFORM_COLLISION_FORCE: 5.0,
+  ATTRACT_RANGE: 1.25,
+  BOUNCE_RESTITUTION: 0.6,
+  DRIFT_FORCE: 0.08,
+  // 手势控制参数
+  FINGER_DEFORM_FORCE: 8.0,
+  FINGER_DEFORM_RADIUS: 0.7,
+  FINGER_VELOCITY_DAMP: 0.92,     // 手指触碰时泡泡速度衰减（减缓移动）
+  FINGER_BOUNCE_FORCE: 0.12,      // 手指触碰时缓慢弹开的力度
+  FINGER_HOLD_TIME: 1500,
+  FINGER_BURST_PARTICLES: 20,
+  // 捏合手势生成泡泡参数
+  PINCH_DISTANCE_THRESHOLD: 35,     // 指尖距离阈值（像素），低于此值判定为捏合
+  PINCH_BUBBLE_MIN_R: 15,           // 捏合生成泡泡最小半径
+  PINCH_BUBBLE_MAX_R: 35,           // 捏合生成泡泡最大半径
+  PINCH_SPAWN_COOLDOWN: 300,        // 捏合生成冷却时间（ms）
+  PINCH_OUTWARD_SPEED: 2.5,         // 捏合生成泡泡向外扩散速度
+  // 鼠标触碰形变参数
+  MOUSE_DEFORM_FORCE: 6.0,
+  MOUSE_DEFORM_RADIUS: 0.65,
+  MOUSE_PUSH_FORCE: 0.2,
+  // 震荡波参数
+  SHOCKWAVE_MAX_RADIUS: 200,       // 震荡波最大影响半径
+  SHOCKWAVE_DURATION: 450,         // 震荡波持续时间(ms)（缩短以减少渲染帧数）
+  SHOCKWAVE_FORCE: 3.5,            // 震荡波推力
+  // 安全检查
+  BUBBLE_HARD_LIMIT: 30,           // 泡泡硬上限（防止O(N²)崩溃）
+  ANSWER_CARD_MAX: 5,              // 同时最多答案卡片数
+};
+
+const NV = CONFIG.DEFORM_VERTS;
+
+// ============================================================
+//  工具函数
+// ============================================================
+function rand(a, b) { return a + Math.random() * (b - a); }
+function randInt(a, b) { return Math.floor(rand(a, b + 1)); }
+function randColor() { return CONFIG.BUBBLE_COLORS[randInt(0, CONFIG.BUBBLE_COLORS.length - 1)]; }
+
+const _hc = Object.create(null);
+function hRGB(hex) {
+  if (_hc[hex]) return _hc[hex];
+  return (_hc[hex] = [parseInt(hex.slice(1,3),16), parseInt(hex.slice(3,5),16), parseInt(hex.slice(5,7),16)]);
+}
+
+// ============================================================
+//  Bubble 类
+// ============================================================
+class Bubble {
+  constructor(x, y, radius, color) {
+    this.x = x; this.y = y;
+    this.vx = rand(-1, 1); this.vy = rand(-1, 1);
+    this.baseRadius = radius;
+    this.color = color || randColor();
+    this.alive = true;
+
+    this.verts = new Float64Array(NV * 2);
+    this.vvels = new Float64Array(NV * 2);
+    this.rcos  = new Float64Array(NV);
+    this.rsin  = new Float64Array(NV);
+    for (let i = 0; i < NV; i++) {
+      const a = (i / NV) * Math.PI * 2;
+      this.rcos[i] = Math.cos(a);
+      this.rsin[i] = Math.sin(a);
+      this.verts[i*2]   = this.rcos[i] * radius;
+      this.verts[i*2+1] = this.rsin[i] * radius;
+    }
+
+    const [cr,cg,cb] = hRGB(this.color);
+    this._c060 = `rgba(${cr},${cg},${cb},0.6)`;
+    this._c040 = `rgba(${cr},${cg},${cb},0.4)`;
+    this._c015 = `rgba(${cr},${cg},${cb},0.15)`;
+    this._c050 = `rgba(${cr},${cg},${cb},0.5)`;
+    this._c080 = `rgba(${cr},${cg},${cb},0.8)`;
+
+  // 渐变缓存（性能优化：以(0,0)为中心构建，通过translate复用）
+  this._fillGrad = null;
+  this._hlGrad = null;
+  this._lastGradR = -1;
+
+  // 手势追踪
+    this.fingerContactStart = 0;
+    this.fingerHolding = false;
+    this.fingerProgress = 0;
+  }
+}
+
+// ============================================================
+//  全局状态
+// ============================================================
+const state = {
+  bubbles: [],
+  particles: [],
+  lastReplenish: 0,
+  lastGrowthTime: 0,
+  canvasW: 0, canvasH: 0,
+  fingerTip: null,
+  thumbTip: null,           // 大拇指指尖位置 (landmark 4)
+  isPinching: false,        // 当前是否捏合
+  wasPinching: false,       // 上一帧是否捏合（上升沿检测）
+  lastPinchSpawn: 0,        // 上次捏合生成时间戳
+  pendingPinchSpawn: false, // 待生成的捏合泡泡标记
+  handDetected: false,
+  mouseX: -9999,
+  mouseY: -9999,
+  mouseOnCanvas: false,
+  aliveCount: 0,           // 缓存存活泡泡数量，避免重复遍历
+  frameCount: 0,           // 帧计数器，用于背景缓存刷新
+  shockwaves: [],          // 震荡波 [{x, y, radius, born, maxR, duration, force}]
+  backBtnHoldStart: 0,     // 手指触碰返回按钮开始时间
+  backBtnHolding: false,   // 手指是否在返回按钮上
+  backBtnProgress: 0,      // 返回按钮进度 0~1
+  cachedBtnCX: 0, cachedBtnCY: 0, cachedBtnR: 0, // 缓存返回按钮位置（避免每帧 getBoundingClientRect）
+};
+
+// ============================================================
+//  答案库（可编辑）
+// ============================================================
+const DEFAULT_ANSWERS = [
+  { type: 'text', content: '是的，毫无疑问！' },
+  { type: 'text', content: '很有可能是这样' },
+  { type: 'text', content: '答案就在你心中' },
+  { type: 'text', content: '再试一次吧！' },
+  { type: 'text', content: '一切皆有可能 ✨' },
+  { type: 'text', content: '保持耐心，好事即将发生' },
+  { type: 'text', content: '听从你的直觉' },
+  { type: 'text', content: '现在还不是时候' },
+  { type: 'text', content: '当然可以！' },
+  { type: 'text', content: '换个角度想想 💡' },
+  { type: 'text', content: '前方有惊喜等着你' },
+  { type: 'text', content: '相信过程' },
+  { type: 'image', content: 'https://picsum.photos/seed/bubble1/240/240' },
+  { type: 'image', content: 'https://picsum.photos/seed/bubble2/240/240' },
+  { type: 'image', content: 'https://picsum.photos/seed/bubble3/240/240' },
+];
+
+let answerLibrary = JSON.parse(JSON.stringify(DEFAULT_ANSWERS)); // 深拷贝
+let activeAnswers = [];   // 当前显示的答案卡片 [{id, x, y, question, answer, born}]
+let answerCardId = 0;
+
+function getRandomAnswer() {
+  if (answerLibrary.length === 0) return { type: 'text', content: '答案库为空，去添加一些答案吧！' };
+  return answerLibrary[Math.floor(Math.random() * answerLibrary.length)];
+}
+
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+const videoEl = document.getElementById('camera-preview');
+const handDot = document.getElementById('hand-dot');
+const handText = document.getElementById('hand-text');
+const handStatusEl = document.getElementById('hand-status');
+
+// 离屏背景缓存Canvas（避免每帧重建26+个渐变对象）
+const bgCanvas = document.createElement('canvas');
+const bgCtx = bgCanvas.getContext('2d');
+const BG_CACHE_INTERVAL = 6;  // 每6帧重绘一次背景（v9.40简化后更轻量）
+let bgCacheDirty = true;       // 首帧强制绘制
+
+function resizeCanvas() {
+  const dpr = window.devicePixelRatio || 1;
+  const w = window.innerWidth, h = window.innerHeight;
+  canvas.width = w * dpr; canvas.height = h * dpr;
+  canvas.style.width = w + 'px'; canvas.style.height = h + 'px';
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  // 离屏背景Canvas用逻辑尺寸（渐变本身平滑，不需要高分辨率）
+  bgCanvas.width = w; bgCanvas.height = h;
+  bgCacheDirty = true;
+  state.canvasW = w; state.canvasH = h;
+}
+window.addEventListener('resize', resizeCanvas);
+resizeCanvas();
+
+// ============================================================
+//  MediaPipe 手部追踪
+// ============================================================
+let mpHands = null;
+let mpCamera = null;
+
+function initHandTracking() {
+  try {
+    mpHands = new Hands({
+      locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.4.1675469240/${file}`
+    });
+
+    mpHands.setOptions({
+      maxNumHands: 1,
+      modelComplexity: 0,
+      minDetectionConfidence: 0.6,
+      minTrackingConfidence: 0.5
+    });
+
+    mpHands.onResults(onHandResults);
+
+    mpCamera = new Camera(videoEl, {
+      onFrame: async () => {
+        if (mpHands) {
+          try { await mpHands.send({ image: videoEl }); } catch(e) {}
+        }
+      },
+      width: 640,
+      height: 480
+    });
+    mpCamera.start();
+
+    handStatusEl.classList.add('visible');
+    handText.textContent = '正在启动摄像头…';
+    console.log('MediaPipe 手势追踪已启动');
+  } catch (err) {
+    console.warn('手势追踪初始化失败:', err);
+    handText.textContent = '摄像头不可用';
+  }
+}
+
+function onHandResults(results) {
+  try {
+    if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
+    const landmarks = results.multiHandLandmarks[0];
+    state.handDetected = true;
+
+    // 食指尖 = landmark 8
+    const tip = landmarks[8];
+    // 镜像 x（前置摄像头），映射到画布坐标
+    state.fingerTip = {
+      x: (1 - tip.x) * state.canvasW,
+      y: tip.y * state.canvasH
+    };
+
+    // 大拇指尖 = landmark 4
+    const thumb = landmarks[4];
+    state.thumbTip = {
+      x: (1 - thumb.x) * state.canvasW,
+      y: thumb.y * state.canvasH
+    };
+
+    // 检测捏合手势：食指尖与大拇指尖距离
+    const dx = state.fingerTip.x - state.thumbTip.x;
+    const dy = state.fingerTip.y - state.thumbTip.y;
+    const pinchDist = Math.sqrt(dx*dx + dy*dy);
+    state.isPinching = pinchDist < CONFIG.PINCH_DISTANCE_THRESHOLD;
+
+    // 上升沿：从未捏合→捏合，触发生成
+    if (state.isPinching && !state.wasPinching) {
+      state.pendingPinchSpawn = true;
+    }
+    state.wasPinching = state.isPinching;
+
+    handDot.classList.add('active');
+    handText.textContent = '手势已识别';
+  } else {
+    state.handDetected = false;
+    state.fingerTip = null;
+    state.thumbTip = null;
+    state.isPinching = false;
+    state.wasPinching = false;
+    handDot.classList.remove('active');
+    handText.textContent = '等待手势…';
+    }
+  } catch(err) {
+    console.warn('onHandResults 异常:', err);
+    state.handDetected = false;
+    state.fingerTip = null;
+    state.thumbTip = null;
+    state.isPinching = false;
+    state.wasPinching = false;
+  }
+}
+
+// ============================================================
+//  泡泡初始化
+// ============================================================
+function initBubbles() {
+  state.bubbles = [];
+  state.aliveCount = 0;
+  const pad = 3;
+  for (let i = 0; i < CONFIG.MIN_COUNT; i++) {
+    const r = rand(CONFIG.MIN_RADIUS, CONFIG.MAX_RADIUS);
+    let placed = false;
+    for (let a = 0; a < 4000; a++) {
+      const x = pad + r + Math.random() * (state.canvasW - 2*(pad+r));
+      const y = pad + r + Math.random() * (state.canvasH - 2*(pad+r));
+      let ok = true;
+      for (const b of state.bubbles) {
+        const dx = b.x - x, dy = b.y - y;
+        const md = b.baseRadius + r + pad;
+        if (dx*dx + dy*dy < md*md) { ok = false; break; }
+      }
+      if (ok) { state.bubbles.push(new Bubble(x, y, r, randColor())); state.aliveCount++; placed = true; break; }
+    }
+    if (!placed) console.warn('无法放置泡泡 #' + i);
+  }
+}
+
+function spawnBubble() {
+  // 硬上限：防止泡泡过多导致 O(N²) 碰撞计算崩溃
+  // 安全检查：无效画布尺寸或达到上限时拒绝
+  if (state.aliveCount >= CONFIG.BUBBLE_HARD_LIMIT) return;
+  if (isNaN(state.canvasW) || state.canvasW < 200 || isNaN(state.canvasH) || state.canvasH < 200) return;
+  const r = rand(CONFIG.MIN_RADIUS, CONFIG.MAX_RADIUS);
+  const x = rand(r + 80, state.canvasW - r - 80);
+  const y = rand(r + 80, state.canvasH - r - 80);
+  // 生成位置异常时拒绝
+  if (isNaN(x) || isNaN(y) || x < 0 || y < 0) return;
+  state.bubbles.push(new Bubble(x, y, r, randColor()));
+  state.aliveCount++;
+}
+
+function spawnPinchBubble(now) {
+  if (now - state.lastPinchSpawn < CONFIG.PINCH_SPAWN_COOLDOWN) return;
+  // 硬上限
+  if (state.aliveCount >= CONFIG.BUBBLE_HARD_LIMIT) return;
+  state.lastPinchSpawn = now;
+
+  const fx = state.fingerTip.x, fy = state.fingerTip.y;
+  const tx = state.thumbTip.x, ty = state.thumbTip.y;
+  // NaN 防护：手势数据异常时拒绝生成
+  if (isNaN(fx) || isNaN(fy) || isNaN(tx) || isNaN(ty)) return;
+
+  // 生成位置：食指尖与大拇指尖的中点
+  const cx = (fx + tx) / 2;
+  const cy = (fy + ty) / 2;
+
+  // 向外扩散方向：沿食指→拇指方向，加上轻微随机偏转
+  const dx = (fx - tx);
+  const dy = (fy - ty);
+  const dist = Math.sqrt(dx*dx + dy*dy) || 1;
+  const nx = dx / dist;
+  const ny = dy / dist;
+
+  // 扇形扩散（±30度随机偏转 + 轻微上飘）
+  const angle = Math.atan2(ny, nx) + rand(-0.5, 0.5);
+  const spreadAngle = angle - Math.PI / 2 + rand(-0.2, 0.2); // 偏向上方
+  const sx = Math.cos(spreadAngle);
+  const sy = Math.sin(spreadAngle);
+
+  const r = rand(CONFIG.PINCH_BUBBLE_MIN_R, CONFIG.PINCH_BUBBLE_MAX_R);
+  const b = new Bubble(cx, cy, r, randColor());
+  b.vx = sx * CONFIG.PINCH_OUTWARD_SPEED + rand(-0.5, 0.5);
+  b.vy = sy * CONFIG.PINCH_OUTWARD_SPEED + rand(-0.5, 0.5);
+  state.bubbles.push(b);
+  state.aliveCount++;
+}
+
+// ============================================================
+//  物理
+// ============================================================
+function applyPhysics(dt) {
+  const bubbles = state.bubbles;
+  const damp = CONFIG.VELOCITY_DAMPING;
+
+  for (let k = 0; k < bubbles.length; k++) {
+    const b = bubbles[k];
+    if (!b.alive) continue;
+
+    // NaN 防护：如果位置或速度异常，重置泡泡
+    if (isNaN(b.x) || isNaN(b.y) || isNaN(b.vx) || isNaN(b.vy) || isNaN(b.baseRadius) || b.baseRadius <= 0) {
+      b.alive = false; state.aliveCount--; continue;
+    }
+
+    b.x += b.vx * dt;
+    b.y += b.vy * dt;
+    b.vx *= damp; b.vy *= damp;
+
+    b.vx += (Math.random() - 0.5) * CONFIG.DRIFT_FORCE;
+    b.vy += (Math.random() - 0.5) * CONFIG.DRIFT_FORCE;
+
+    const s2 = b.vx*b.vx + b.vy*b.vy;
+    if (s2 > 36) { const inv = 6/Math.sqrt(s2); b.vx *= inv; b.vy *= inv; }
+
+    const r = b.baseRadius;
+    if (b.x < r) { b.x = r; b.vx = Math.abs(b.vx)*0.35; }
+    if (b.x > state.canvasW - r) { b.x = state.canvasW - r; b.vx = -Math.abs(b.vx)*0.35; }
+    if (b.y < r) { b.y = r; b.vy = Math.abs(b.vy)*0.35; }
+    if (b.y > state.canvasH - r) { b.y = state.canvasH - r; b.vy = -Math.abs(b.vy)*0.35; }
+  }
+
+  for (let i = 0; i < bubbles.length; i++) {
+    if (!bubbles[i].alive) continue;
+    for (let j = i+1; j < bubbles.length; j++) {
+      if (!bubbles[j].alive) continue;
+      collidePair(bubbles[i], bubbles[j]);
+    }
+  }
+
+  const sp = CONFIG.DEFORM_SPRING;
+  const dm = CONFIG.DEFORM_DAMPING;
+  const md2 = CONFIG.DEFORM_MAX_DISP * CONFIG.DEFORM_MAX_DISP;
+
+  for (let k = 0; k < bubbles.length; k++) {
+    const b = bubbles[k];
+    if (!b.alive) continue;
+    const v = b.verts, vv = b.vvels, rc = b.rcos, rs = b.rsin;
+    const R = b.baseRadius;
+    const Rm2 = R * R * md2;
+
+    for (let i = 0; i < NV; i++) {
+      const i2 = i * 2;
+      vv[i2]   = (vv[i2]   + (rc[i]*R - v[i2])   * sp) * dm;
+      vv[i2+1] = (vv[i2+1] + (rs[i]*R - v[i2+1]) * sp) * dm;
+      v[i2]   += vv[i2]   * dt;
+      v[i2+1] += vv[i2+1] * dt;
+      const d2 = v[i2]*v[i2] + v[i2+1]*v[i2+1];
+      if (d2 > Rm2) { const s = Math.sqrt(Rm2/d2); v[i2] *= s; v[i2+1] *= s; }
+    }
+
+    // NaN/Infinity 清理：扫描全部顶点和速度数据，发现异常即重置整个泡泡形变
+    let vertsCorrupt = false;
+    for (let i = 0; i < NV * 2; i++) {
+      if (isNaN(vv[i]) || !isFinite(vv[i]) || isNaN(v[i]) || !isFinite(v[i])) {
+        vertsCorrupt = true; break;
+      }
+    }
+    if (vertsCorrupt) {
+      vv.fill(0);
+      for (let i = 0; i < NV; i++) { v[i*2] = rc[i]*R; v[i*2+1] = rs[i]*R; }
+    }
+  }
+}
+
+function collidePair(a, b) {
+  // NaN 防护
+  if (isNaN(a.x) || isNaN(a.y) || isNaN(b.x) || isNaN(b.y)) return;
+  const dx = b.x - a.x, dy = b.y - a.y;
+  const d2 = dx*dx + dy*dy;
+  const minD = a.baseRadius + b.baseRadius;
+
+  const attractRange = minD * CONFIG.ATTRACT_RANGE;
+  if (d2 > attractRange * attractRange) return;
+
+  const d = Math.sqrt(d2);
+  if (d < 0.01) return;
+  const nx = dx/d, ny = dy/d;
+
+  // 预接触吸引
+  if (d >= minD && d < attractRange) {
+    const factor = 1 - d / attractRange;
+    const attractForce = 0.15 * factor * factor;
+    a.vx += nx * attractForce; a.vy += ny * attractForce;
+    b.vx -= nx * attractForce; b.vy -= ny * attractForce;
+
+    const preDeform = 0.8 * factor;
+    const spA = a.baseRadius * 0.6, spA2 = spA * spA;
+    const spB = b.baseRadius * 0.6, spB2 = spB * spB;
+    const lxa = a.baseRadius * nx, lya = a.baseRadius * ny;
+    const lxb = -b.baseRadius * nx, lyb = -b.baseRadius * ny;
+    for (let i = 0; i < NV; i++) {
+      const i2 = i*2;
+      let vxd, vyd, dd;
+      vxd = a.verts[i2]-lxa; vyd = a.verts[i2+1]-lya; dd = vxd*vxd+vyd*vyd;
+      if (dd < spA2 && dd > 0.0001) {
+        const f = (1 - Math.sqrt(dd)/spA) * preDeform;
+        a.vvels[i2] -= nx*f; a.vvels[i2+1] -= ny*f;
+      }
+      vxd = b.verts[i2]-lxb; vyd = b.verts[i2+1]-lyb; dd = vxd*vxd+vyd*vyd;
+      if (dd < spB2 && dd > 0.0001) {
+        const f = (1 - Math.sqrt(dd)/spB) * preDeform;
+        b.vvels[i2] += nx*f; b.vvels[i2+1] += ny*f;
+      }
+    }
+    return;
+  }
+
+  // 实际碰撞
+  if (d < minD) {
+    const overlap = minD - d;
+    const overlapRatio = overlap / minD;
+
+    const totalR = a.baseRadius + b.baseRadius;
+    const ratioA = b.baseRadius / totalR;
+    const ratioB = a.baseRadius / totalR;
+    a.x -= nx * overlap * ratioA;
+    a.y -= ny * overlap * ratioA;
+    b.x += nx * overlap * ratioB;
+    b.y += ny * overlap * ratioB;
+
+    const dvn = (b.vx - a.vx)*nx + (b.vy - a.vy)*ny;
+    if (dvn < 0) {
+      const bounce = CONFIG.BOUNCE_RESTITUTION;
+      const impA = dvn * bounce * ratioA;
+      const impB = dvn * bounce * ratioB;
+      a.vx += impA * nx; a.vy += impA * ny;
+      b.vx -= impB * nx; b.vy -= impB * ny;
+
+      const tx = -ny, ty = nx;
+      const dvt = (b.vx - a.vx)*tx + (b.vy - a.vy)*ty;
+      const tangentImpulse = dvt * 0.1;
+      a.vx += tangentImpulse * tx * ratioA;
+      a.vy += tangentImpulse * ty * ratioA;
+      b.vx -= tangentImpulse * tx * ratioB;
+      b.vy -= tangentImpulse * ty * ratioB;
+    }
+
+    const force = CONFIG.DEFORM_COLLISION_FORCE * overlapRatio;
+    const spA = a.baseRadius * 0.85, spA2 = spA * spA;
+    const spB = b.baseRadius * 0.85, spB2 = spB * spB;
+    const lxa = a.baseRadius * nx, lya = a.baseRadius * ny;
+    const lxb = -b.baseRadius * nx, lyb = -b.baseRadius * ny;
+
+    for (let i = 0; i < NV; i++) {
+      const i2 = i*2;
+      let vxd = a.verts[i2]-lxa, vyd = a.verts[i2+1]-lya;
+      let dd = vxd*vxd + vyd*vyd;
+      if (dd < spA2 && dd > 0.0001) {
+        const dist = Math.sqrt(dd);
+        if (isNaN(dist)) continue;  // NaN防护
+        const f = (1 - dist/spA) * force;
+        a.vvels[i2] -= nx * f;
+        a.vvels[i2+1] -= ny * f;
+        const radialX = a.verts[i2] / (a.baseRadius || 1);
+        const radialY = a.verts[i2+1] / (a.baseRadius || 1);
+        const flatForce = f * 0.3 * overlapRatio;
+        a.vvels[i2] -= radialX * flatForce;
+        a.vvels[i2+1] -= radialY * flatForce;
+      }
+      vxd = b.verts[i2]-lxb; vyd = b.verts[i2+1]-lyb;
+      dd = vxd*vxd + vyd*vyd;
+      if (dd < spB2 && dd > 0.0001) {
+        const dist = Math.sqrt(dd);
+        if (isNaN(dist)) continue;  // NaN防护
+        const f = (1 - dist/spB) * force;
+        b.vvels[i2] += nx * f;
+        b.vvels[i2+1] += ny * f;
+        const radialX = b.verts[i2] / (b.baseRadius || 1);
+        const radialY = b.verts[i2+1] / (b.baseRadius || 1);
+        const flatForce = f * 0.3 * overlapRatio;
+        b.vvels[i2] -= radialX * flatForce;
+        b.vvels[i2+1] -= radialY * flatForce;
+      }
+    }
+  }
+}
+
+// ============================================================
+//  食指交互：触碰形变 + 停留破裂
+// ============================================================
+function applyFingerInteraction(now) {
+  const tip = state.fingerTip;
+  if (!tip) {
+    // 手指不在画面中 → 重置所有泡泡的接触计时
+    for (const b of state.bubbles) {
+      if (!b.alive) continue;
+      b.fingerContactStart = 0;
+      b.fingerHolding = false;
+      b.fingerProgress = 0;
+    }
+    // 重置返回按钮状态
+    state.backBtnHolding = false;
+    state.backBtnHoldStart = 0;
+    state.backBtnProgress = 0;
+    return;
+  }
+
+  const fx = tip.x, fy = tip.y;
+  if (isNaN(fx) || isNaN(fy)) return;  // NaN防护：手势坐标异常时跳过
+
+  // ---- 检测手指是否在返回按钮上 ----
+  // 每60帧更新一次按钮位置缓存（约1秒一次，避免每帧强制reflow）
+  if (state.frameCount % 60 === 0) {
+    const br = backToStartBtn.getBoundingClientRect();
+    state.cachedBtnCX = br.left + br.width / 2;
+    state.cachedBtnCY = br.top + br.height / 2;
+    state.cachedBtnR = br.width / 2 + 8;
+  }
+  const distToBtn = Math.sqrt((fx - state.cachedBtnCX)**2 + (fy - state.cachedBtnCY)**2);
+
+  if (distToBtn < state.cachedBtnR) {
+    if (!state.backBtnHolding) {
+      state.backBtnHolding = true;
+      state.backBtnHoldStart = now;
+    }
+    const held = now - state.backBtnHoldStart;
+    state.backBtnProgress = Math.min(held / 3000, 1.0);
+    if (held >= 3000) {
+      state.backBtnHolding = false;
+      state.backBtnHoldStart = 0;
+      state.backBtnProgress = 0;
+      goBackToStartScreen();
+      return;
+    }
+    // 手指在按钮上时不与泡泡交互
+    return;
+  } else {
+    state.backBtnHolding = false;
+    state.backBtnHoldStart = 0;
+    state.backBtnProgress = 0;
+  }
+
+  // 找到食指尖碰到的泡泡（取最近的）
+  let closestBubble = null;
+  let closestDist = Infinity;
+
+  for (const b of state.bubbles) {
+    if (!b.alive) continue;
+    const dx = b.x - fx, dy = b.y - fy;
+    const dist = Math.sqrt(dx*dx + dy*dy);
+
+    if (dist < b.baseRadius) {
+      if (dist < closestDist) {
+        closestDist = dist;
+        closestBubble = b;
+      }
+    }
+    // 手指不在该泡泡内 → 重置计时
+    if (dist >= b.baseRadius) {
+      b.fingerContactStart = 0;
+      b.fingerHolding = false;
+      b.fingerProgress = 0;
+    }
+  }
+
+  // 非最近泡泡也要重置
+  if (closestBubble) {
+    for (const b of state.bubbles) {
+      if (!b.alive || b === closestBubble) continue;
+      if (b.fingerHolding) {
+        b.fingerContactStart = 0;
+        b.fingerHolding = false;
+        b.fingerProgress = 0;
+      }
+    }
+  }
+
+  if (!closestBubble) return;
+
+  const b = closestBubble;
+  const dx = b.x - fx, dy = b.y - fy;
+  const dist = Math.sqrt(dx*dx + dy*dy);
+
+  // ---- 食指触碰形变 ----
+  const contactLocalX = fx - b.x;
+  const contactLocalY = fy - b.y;
+
+  const force = CONFIG.FINGER_DEFORM_FORCE;
+  const influenceRadius = b.baseRadius * CONFIG.FINGER_DEFORM_RADIUS;
+  const ir2 = influenceRadius * influenceRadius;
+
+  for (let i = 0; i < NV; i++) {
+    const i2 = i * 2;
+    const vxd = b.verts[i2] - contactLocalX;
+    const vyd = b.verts[i2+1] - contactLocalY;
+    const dd = vxd*vxd + vyd*vyd;
+
+    if (dd < ir2 && dd > 0.0001) {
+      const d = Math.sqrt(dd);
+      if (isNaN(d)) continue;  // NaN防护
+      const proximity = Math.max(0, 1 - d / influenceRadius);
+      const f = proximity * proximity * force;  // 距离衰减
+
+      // 顶点向手指方向凹陷
+      const pushX = contactLocalX / (b.baseRadius || 1);
+      const pushY = contactLocalY / (b.baseRadius || 1);
+      b.vvels[i2] -= pushX * f;
+      b.vvels[i2+1] -= pushY * f;
+
+      // 接触面变平
+      const radialX = b.verts[i2] / (b.baseRadius || 1);
+      const radialY = b.verts[i2+1] / (b.baseRadius || 1);
+      b.vvels[i2] -= radialX * f * 0.2;
+      b.vvels[i2+1] -= radialY * f * 0.2;
+    }
+  }
+
+  // 手指触碰泡泡时减缓移动速度
+  b.vx *= CONFIG.FINGER_VELOCITY_DAMP;
+  b.vy *= CONFIG.FINGER_VELOCITY_DAMP;
+
+  // 缓慢弹开：沿手指→泡泡方向施加轻微推力
+  const nx = dx / (dist || 1), ny = dy / (dist || 1);
+  const pushStrength = 1 - dist / b.baseRadius; // 越深入推力越大
+  b.vx += nx * pushStrength * CONFIG.FINGER_BOUNCE_FORCE;
+  b.vy += ny * pushStrength * CONFIG.FINGER_BOUNCE_FORCE;
+
+  // ---- 停留2秒破裂 ----
+  if (b.fingerContactStart === 0) {
+    b.fingerContactStart = now;
+    b.fingerHolding = true;
+  }
+
+  const holdDuration = now - b.fingerContactStart;
+  b.fingerProgress = Math.min(holdDuration / CONFIG.FINGER_HOLD_TIME, 1.0);
+
+  if (holdDuration >= CONFIG.FINGER_HOLD_TIME) {
+    destroyBubble(b, true);
+    b.fingerContactStart = 0;
+    b.fingerHolding = false;
+    b.fingerProgress = 0;
+  }
+}
+
+// ============================================================
+//  鼠标交互：触碰形变
+// ============================================================
+function applyMouseInteraction() {
+  if (!state.mouseOnCanvas) return;
+
+  const mx = state.mouseX, my = state.mouseY;
+  if (isNaN(mx) || isNaN(my)) return;  // NaN防护
+
+  for (const b of state.bubbles) {
+    if (!b.alive) continue;
+
+    const dx = b.x - mx, dy = b.y - my;
+    const dist = Math.sqrt(dx*dx + dy*dy);
+
+    if (dist >= b.baseRadius) continue;
+
+    // 鼠标在泡泡内部 → 施加形变力
+    const contactLocalX = mx - b.x;
+    const contactLocalY = my - b.y;
+
+    const force = CONFIG.MOUSE_DEFORM_FORCE;
+    const influenceRadius = b.baseRadius * CONFIG.MOUSE_DEFORM_RADIUS;
+    const ir2 = influenceRadius * influenceRadius;
+
+    for (let i = 0; i < NV; i++) {
+      const i2 = i * 2;
+      const vxd = b.verts[i2] - contactLocalX;
+      const vyd = b.verts[i2+1] - contactLocalY;
+      const dd = vxd*vxd + vyd*vyd;
+
+      if (dd < ir2 && dd > 0.0001) {
+        const d = Math.sqrt(dd);
+        if (isNaN(d)) continue;  // NaN防护
+        const proximity = 1 - d / influenceRadius;
+        const f = proximity * proximity * force;
+
+        // 顶点向鼠标方向凹陷
+        const pushX = contactLocalX / (b.baseRadius || 1);
+        const pushY = contactLocalY / (b.baseRadius || 1);
+        b.vvels[i2] -= pushX * f;
+        b.vvels[i2+1] -= pushY * f;
+
+        // 接触面变平
+        const radialX = b.verts[i2] / (b.baseRadius || 1);
+        const radialY = b.verts[i2+1] / (b.baseRadius || 1);
+        b.vvels[i2] -= radialX * f * 0.2;
+        b.vvels[i2+1] -= radialY * f * 0.2;
+      }
+    }
+
+    // 轻微推开泡泡
+    const nx = dx / (dist || 1), ny = dy / (dist || 1);
+    const pushStrength = 1 - dist / b.baseRadius;
+    b.vx += nx * pushStrength * CONFIG.MOUSE_PUSH_FORCE;
+    b.vy += ny * pushStrength * CONFIG.MOUSE_PUSH_FORCE;
+  }
+}
+
+// ============================================================
+//  流动背景：明亮浅色红蓝渐变 + 流动色彩漂移
+// ============================================================
+// 性能优化：大幅减少渐变对象创建（26→6），改用固定CSS渐变底色+少量动态层
+function drawFlowingBg(now, targetCtx, w, h) {
+  const t = now * 0.001;
+  const c = targetCtx;
+
+  // 基底：固定CSS渐变（一次性填充，无渐变对象创建）
+  c.fillStyle = '#f0e0f0';
+  c.fillRect(0, 0, w, h);
+
+  // 色彩团：保留2个（原3个→2个），合并粉+紫色团，保留蓝色团
+  const magentaX = w * 0.32 + Math.sin(t * 0.15) * w * 0.12;
+  const magentaY = h * 0.35 + Math.cos(t * 0.12) * h * 0.1;
+  const magentaR = Math.max(w, h) * 0.5;
+  const mg = c.createRadialGradient(magentaX, magentaY, 0, magentaX, magentaY, magentaR);
+  mg.addColorStop(0, 'rgba(245,185,210,0.35)');
+  mg.addColorStop(0.4, 'rgba(220,160,195,0.12)');
+  mg.addColorStop(1, 'rgba(0,0,0,0)');
+  c.fillStyle = mg;
+  c.fillRect(0, 0, w, h);
+
+  const blueX = w * 0.72 + Math.sin(t * 0.18) * w * 0.1;
+  const blueY = h * 0.6 + Math.cos(t * 0.14) * h * 0.08;
+  const blueR = Math.max(w, h) * 0.45;
+  const bg2 = c.createRadialGradient(blueX, blueY, 0, blueX, blueY, blueR);
+  bg2.addColorStop(0, 'rgba(150,205,250,0.3)');
+  bg2.addColorStop(0.4, 'rgba(120,180,230,0.1)');
+  bg2.addColorStop(1, 'rgba(0,0,0,0)');
+  c.fillStyle = bg2;
+  c.fillRect(0, 0, w, h);
+
+  // 横向波纹：12→4条，每两条合并
+  const hw = 4;
+  for (let i = 0; i < hw; i++) {
+    const baseY = (h / hw) * (i + 0.5);
+    const waveY = baseY + Math.sin(t * 0.35 + i * 1.3) * 30;
+    const thick = 70 + Math.sin(t * 0.3 + i * 1.5) * 20;
+    const a = 0.07 + Math.sin(t * 0.4 + i) * 0.03;
+    const grad = c.createLinearGradient(0, waveY - thick, w * 0.7, waveY + thick);
+    grad.addColorStop(0, 'rgba(240,195,215,0)');
+    grad.addColorStop(0.3, `rgba(240,195,215,${(a*0.5).toFixed(3)})`);
+    grad.addColorStop(0.6, `rgba(180,195,225,${a.toFixed(3)})`);
+    grad.addColorStop(1, 'rgba(180,195,225,0)');
+    c.fillStyle = grad;
+    c.fillRect(0, waveY - thick, w, thick * 2);
+  }
+
+  // 竖向波纹：8→3条
+  const vw = 3;
+  for (let i = 0; i < vw; i++) {
+    const baseX = (w / vw) * (i + 0.5);
+    const waveX = baseX + Math.sin(t * 0.3 + i * 1.2) * 18;
+    const thick = 50;
+    const a = 0.05 + Math.sin(t * 0.35 + i) * 0.02;
+    const grad = c.createLinearGradient(waveX - thick, 0, waveX + thick, h * 0.8);
+    grad.addColorStop(0, 'rgba(210,210,240,0)');
+    grad.addColorStop(0.4, `rgba(210,210,240,${a.toFixed(3)})`);
+    grad.addColorStop(1, 'rgba(210,210,240,0)');
+    c.fillStyle = grad;
+    c.fillRect(waveX - thick, 0, thick * 2, h);
+  }
+
+  // 柔光斑：2→1个
+  const sx = w * 0.45 + Math.sin(t * 0.16) * w * 0.08;
+  const sy = h * 0.4 + Math.cos(t * 0.12) * h * 0.06;
+  const sr = Math.min(w, h) * 0.3;
+  const s = c.createRadialGradient(sx, sy, 0, sx, sy, sr);
+  s.addColorStop(0, 'rgba(255,255,255,0.1)');
+  s.addColorStop(0.5, 'rgba(255,245,250,0.03)');
+  s.addColorStop(1, 'rgba(0,0,0,0)');
+  c.fillStyle = s;
+  c.fillRect(0, 0, w, h);
+}
+
+// ============================================================
+//  渲染
+// ============================================================
+function render(now) {
+  const w = state.canvasW, h = state.canvasH;
+
+  // 背景缓存：每BG_CACHE_INTERVAL帧重绘一次离屏Canvas
+  if (bgCacheDirty || state.frameCount % BG_CACHE_INTERVAL === 0) {
+    drawFlowingBg(now, bgCtx, w, h);
+    bgCacheDirty = false;
+  }
+  // 从离屏Canvas复制背景到主Canvas（1次drawImage代替26+次渐变创建）
+  ctx.drawImage(bgCanvas, 0, 0, w, h);
+
+  // 直接遍历绘制，不做排序（排序每帧创建新数组+GC压力，大圆在下自然遮挡小圆即可）
+  for (const b of state.bubbles) {
+    if (!b.alive) continue;
+    if (isNaN(b.x) || isNaN(b.y) || isNaN(b.baseRadius) || b.baseRadius <= 0) continue;
+    drawBubble(b, now);
+  }
+
+  drawParticles();
+  drawShockwaves();
+  drawBackBtnProgress();
+  drawFingerTip(now);
+  drawPinchGesture(now);
+  drawMouseCursor(now);
+}
+
+function drawBubble(b, now) {
+  const bx = b.x, by = b.y, R = b.baseRadius;
+
+  // 接近破裂时泡泡震动
+  let shakeX = 0, shakeY = 0;
+  if (b.fingerHolding && b.fingerProgress > 0.7) {
+    const intensity = (b.fingerProgress - 0.7) / 0.3;
+    shakeX = (Math.random() - 0.5) * intensity * 4;
+    shakeY = (Math.random() - 0.5) * intensity * 4;
+  }
+
+  ctx.save();
+  ctx.translate(bx + shakeX, by + shakeY);
+
+  // 缓存渐变（以原点为中心，translate后复用，仅半径变化时重建）
+  if (!b._fillGrad || Math.abs(b._lastGradR - R) > 0.5) {
+    b._fillGrad = ctx.createRadialGradient(-R*0.3, -R*0.3, R*0.05, 0, 0, R);
+    b._fillGrad.addColorStop(0, 'rgba(255,255,255,0.85)');
+    b._fillGrad.addColorStop(0.25, b._c060);
+    b._fillGrad.addColorStop(0.6, b._c040);
+    b._fillGrad.addColorStop(0.85, b._c015);
+    b._fillGrad.addColorStop(1, 'rgba(255,255,255,0.03)');
+    b._hlGrad = ctx.createRadialGradient(-R*0.25, -R*0.25, 0, R*0.25, R*0.25, R*0.5);
+    b._hlGrad.addColorStop(0, 'rgba(255,255,255,0.75)');
+    b._hlGrad.addColorStop(0.4, 'rgba(255,255,255,0.25)');
+    b._hlGrad.addColorStop(1, 'rgba(255,255,255,0)');
+    b._lastGradR = R;
+  }
+
+  // 检查顶点数据完整性：有NaN或Infinity则跳过此帧绘制，由弹簧恢复
+  const verts = b.verts;
+  for (let i = 0; i < NV * 2; i++) {
+    if (isNaN(verts[i]) || !isFinite(verts[i])) { ctx.restore(); return; }
+  }
+
+  // 绘制形变轮廓（贝塞尔平滑）
+  ctx.beginPath();
+  const last = (NV - 1) * 2;
+  let mx = (verts[last] + verts[0]) * 0.5;
+  let my = (verts[last+1] + verts[1]) * 0.5;
+  ctx.moveTo(mx, my);
+
+  for (let i = 0; i < NV; i++) {
+    const i2 = i * 2;
+    const ni = ((i + 1) % NV) * 2;
+    const nmx = (verts[i2] + verts[ni]) * 0.5;
+    const nmy = (verts[i2+1] + verts[ni+1]) * 0.5;
+    ctx.quadraticCurveTo(verts[i2], verts[i2+1], nmx, nmy);
+  }
+  ctx.closePath();
+
+  ctx.fillStyle = b._fillGrad;
+  ctx.fill();
+
+  ctx.strokeStyle = b._c050;
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
+
+  // 高光
+  ctx.beginPath();
+  ctx.arc(-R*0.25, -R*0.25, R*0.5, 0, Math.PI*2);
+  ctx.fillStyle = b._hlGrad;
+  ctx.fill();
+
+  ctx.restore();
+
+  // 食指停留进度环（在恢复变换后绘制，需要绝对坐标）
+  if (b.fingerHolding && b.fingerProgress > 0) {
+    drawHoldProgress(bx, by, R, b.fingerProgress);
+  }
+}
+
+function drawHoldProgress(cx, cy, radius, progress) {
+  // NaN 防护：若进度值异常，跳过绘制
+  if (isNaN(progress) || !isFinite(progress) || progress <= 0) return;
+  const r = radius + 6;
+
+  // 底环
+  ctx.beginPath();
+  ctx.arc(cx, cy, r, 0, Math.PI * 2);
+  ctx.strokeStyle = 'rgba(255,255,255,0.25)';
+  ctx.lineWidth = 3;
+  ctx.stroke();
+
+  // 进度环（颜色：绿→黄→红）
+  if (progress > 0) {
+    const startAngle = -Math.PI / 2;
+    const endAngle = startAngle + Math.PI * 2 * progress;
+
+    let color;
+    if (progress < 0.5) {
+      const t = progress * 2;
+      const rr = Math.round(255 * t);
+      color = `rgba(${rr},200,80,0.8)`;
+    } else {
+      const t = (progress - 0.5) * 2;
+      const gg = Math.round(200 * (1 - t));
+      color = `rgba(255,${gg},60,0.9)`;
+    }
+
+    ctx.beginPath();
+    ctx.arc(cx, cy, r, startAngle, endAngle);
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 3.5;
+    ctx.lineCap = 'round';
+    ctx.stroke();
+    ctx.lineCap = 'butt';
+  }
+}
+
+function drawFingerTip(now) {
+  const tip = state.fingerTip;
+  if (!tip) return;
+  if (isNaN(tip.x) || isNaN(tip.y)) return;  // NaN防护：防止ctx.arc抛出异常
+
+  const pulse = 0.8 + 0.2 * Math.sin(now * 0.006);
+
+  ctx.beginPath();
+  ctx.arc(tip.x, tip.y, 8 * pulse, 0, Math.PI * 2);
+  const glow = ctx.createRadialGradient(tip.x, tip.y, 0, tip.x, tip.y, 8 * pulse);
+  glow.addColorStop(0, 'rgba(100,180,255,0.7)');
+  glow.addColorStop(0.6, 'rgba(100,180,255,0.3)');
+  glow.addColorStop(1, 'rgba(100,180,255,0)');
+  ctx.fillStyle = glow;
+  ctx.fill();
+
+  ctx.beginPath();
+  ctx.arc(tip.x, tip.y, 3, 0, Math.PI * 2);
+  ctx.fillStyle = 'rgba(60,140,255,0.9)';
+  ctx.fill();
+}
+
+// ---- 返回按钮长按进度环 ----
+function drawBackBtnProgress() {
+  if (!state.backBtnHolding || state.backBtnProgress <= 0) return;
+
+  const cx = state.cachedBtnCX;
+  const cy = state.cachedBtnCY;
+  if (cx === 0 && cy === 0) return; // 尚未缓存
+  const outerR = state.cachedBtnR - 2;
+  const innerR = outerR - 4;
+
+  const progress = state.backBtnProgress;
+
+  // 背景圆环
+  ctx.beginPath();
+  ctx.arc(cx, cy, outerR, 0, Math.PI * 2);
+  ctx.strokeStyle = 'rgba(255,255,255,0.15)';
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
+
+  // 进度弧（绿→黄→红）
+  let r, g, b;
+  if (progress < 0.5) {
+    const t = progress / 0.5;
+    r = Math.round(100 + t * 120);
+    g = Math.round(220 + t * 20);
+    b = Math.round(100 - t * 100);
+  } else {
+    const t = (progress - 0.5) / 0.5;
+    r = Math.round(220 + t * 35);
+    g = Math.round(240 - t * 180);
+    b = Math.round(0);
+  }
+
+  ctx.beginPath();
+  ctx.arc(cx, cy, outerR, -Math.PI / 2, -Math.PI / 2 + progress * Math.PI * 2);
+  ctx.strokeStyle = `rgba(${r},${g},${b},0.8)`;
+  ctx.lineWidth = 3;
+  ctx.shadowColor = `rgba(${r},${g},${b},0.5)`;
+  ctx.shadowBlur = 6;
+  ctx.stroke();
+  ctx.shadowColor = 'transparent';
+  ctx.shadowBlur = 0;
+
+  // 内圈亮线
+  ctx.beginPath();
+  ctx.arc(cx, cy, innerR, 0, Math.PI * 2);
+  ctx.strokeStyle = 'rgba(255,255,255,0.2)';
+  ctx.lineWidth = 1;
+  ctx.stroke();
+
+  // 中心脉动亮点（进度越高越明显）
+  if (progress > 0.5) {
+    const alpha = (progress - 0.5) * 2 * 0.6;
+    const pulseR = 3 + progress * 5;
+    ctx.beginPath();
+    ctx.arc(cx, cy, pulseR, 0, Math.PI * 2);
+    ctx.fillStyle = `rgba(255,255,255,${alpha})`;
+    ctx.fill();
+  }
+}
+
+function drawPinchGesture(now) {
+  const ftip = state.fingerTip;
+  const ttip = state.thumbTip;
+  if (!ftip || !ttip) return;
+  if (isNaN(ftip.x) || isNaN(ftip.y) || isNaN(ttip.x) || isNaN(ttip.y)) return;  // NaN防护
+
+  // 大拇指尖光点
+  ctx.beginPath();
+  ctx.arc(ttip.x, ttip.y, 5, 0, Math.PI * 2);
+  ctx.fillStyle = 'rgba(255,150,100,0.8)';
+  ctx.fill();
+
+  // 两指尖连线
+  ctx.beginPath();
+  ctx.moveTo(ftip.x, ftip.y);
+  ctx.lineTo(ttip.x, ttip.y);
+  ctx.strokeStyle = 'rgba(255,255,255,0.3)';
+  ctx.lineWidth = 1.5;
+  ctx.setLineDash([4, 4]);
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  if (state.isPinching) {
+    // 捏合状态：中间点显示生成光环
+    const cx = (ftip.x + ttip.x) / 2;
+    const cy = (ftip.y + ttip.y) / 2;
+    const pulse = 0.7 + 0.3 * Math.sin(now * 0.01);
+
+    // 外环扩散
+    ctx.beginPath();
+    ctx.arc(cx, cy, 18 * pulse, 0, Math.PI * 2);
+    const glow = ctx.createRadialGradient(cx, cy, 0, cx, cy, 18 * pulse);
+    glow.addColorStop(0, 'rgba(255,200,150,0.6)');
+    glow.addColorStop(0.5, 'rgba(255,150,100,0.2)');
+    glow.addColorStop(1, 'rgba(255,100,50,0)');
+    ctx.fillStyle = glow;
+    ctx.fill();
+
+    // 中心亮点
+    ctx.beginPath();
+    ctx.arc(cx, cy, 4, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(255,200,100,0.9)';
+    ctx.fill();
+  }
+}
+
+function drawMouseCursor(now) {
+  if (!state.mouseOnCanvas) return;
+
+  const mx = state.mouseX, my = state.mouseY;
+  if (isNaN(mx) || isNaN(my)) return;  // NaN防护
+
+  // 检测鼠标是否在某个泡泡内
+  let insideBubble = false;
+  for (const b of state.bubbles) {
+    if (!b.alive) continue;
+    const dx = b.x - mx, dy = b.y - my;
+    if (dx*dx + dy*dy < b.baseRadius*b.baseRadius) {
+      insideBubble = true;
+      break;
+    }
+  }
+
+  // 鼠标在泡泡内时显示光晕
+  if (insideBubble) {
+    const pulse = 0.8 + 0.2 * Math.sin(now * 0.008);
+    ctx.beginPath();
+    ctx.arc(mx, my, 10 * pulse, 0, Math.PI * 2);
+    const glow = ctx.createRadialGradient(mx, my, 0, mx, my, 10 * pulse);
+    glow.addColorStop(0, 'rgba(255,180,100,0.5)');
+    glow.addColorStop(0.6, 'rgba(255,180,100,0.2)');
+    glow.addColorStop(1, 'rgba(255,180,100,0)');
+    ctx.fillStyle = glow;
+    ctx.fill();
+  }
+}
+
+// ============================================================
+//  粒子
+// ============================================================
+let particles = [];
+const MAX_PARTICLES = 120;  // 性能优化：粒子数量上限
+
+function drawParticles() {
+  let writeIdx = 0;
+  for (let i = 0; i < particles.length; i++) {
+    const p = particles[i];
+    p.x += p.vx; p.y += p.vy;
+    p.vy += 0.03;
+    p.life -= p.decay;
+    if (p.life <= 0) continue;
+    const alpha = Math.round(p.life * 100) / 100;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.size * p.life, 0, Math.PI*2);
+    ctx.fillStyle = `rgba(${p.cr},${p.cg},${p.cb},${alpha})`;
+    ctx.fill();
+    particles[writeIdx++] = p;
+  }
+  particles.length = writeIdx;
+}
+
+// ============================================================
+//  震荡波
+// ============================================================
+// 在 destroyBubble 时调用，立即一次性计算推力（避免每帧双重循环）
+function applyShockwavePhysicsOnce(sw) {
+  const force = sw.force;
+  const maxR = sw.maxR;
+  for (let j = 0; j < state.bubbles.length; j++) {
+    const b = state.bubbles[j];
+    if (!b.alive) continue;
+    // 跳过位置异常的泡泡
+    if (isNaN(b.x) || isNaN(b.y) || isNaN(b.baseRadius) || b.baseRadius <= 0) continue;
+    const dx = b.x - sw.x;
+    const dy = b.y - sw.y;
+    const dist = Math.sqrt(dx*dx + dy*dy);
+    if (dist < 1 || dist > maxR) continue;
+    // 距离越近推力越强，用平方衰减
+    const falloff = Math.max(0, 1 - (dist / maxR));
+    const pushForce = force * falloff * falloff;
+    if (isNaN(pushForce)) continue;
+    const nx = dx / dist, ny = dy / dist;
+    b.vx += nx * pushForce * 0.5;
+    b.vy += ny * pushForce * 0.5;
+    // 顶点形变（仅对面向震源的顶点，每隔一个取样以降低计算量）
+    const rCos = b.rcos, rSin = b.rsin;
+    const R = b.baseRadius;
+    for (let v = 0; v < NV; v += 2) {   // 步长2：只算一半顶点
+      const vx = rCos[v] * R, vy = rSin[v] * R;
+      const dot = vx * nx + vy * ny;
+      if (dot > 0) {
+        const align = dot / R;
+        const deformForce = pushForce * align * 0.4;
+        if (isNaN(deformForce)) continue;
+        b.vvels[v*2]   += nx * deformForce;
+        b.vvels[v*2+1] += ny * deformForce;
+      }
+    }
+  }
+}
+
+function updateShockwaves(now) {
+  // 只负责更新半径动画和清理过期震荡波，不再做物理计算
+  const sws = state.shockwaves;
+  let writeIdx = 0;
+  for (let i = 0; i < sws.length; i++) {
+    const sw = sws[i];
+    const elapsed = now - sw.born;
+    if (elapsed >= sw.duration) continue;
+    const t = elapsed / sw.duration;
+    const ease = 1 - (1 - t) * (1 - t); // ease-out
+    sw.radius = sw.maxR * ease;
+    sw.alpha  = 1 - t;                   // 预计算透明度
+    sws[writeIdx++] = sw;
+  }
+  sws.length = writeIdx;
+}
+
+function drawShockwaves() {
+  for (const sw of state.shockwaves) {
+    const alpha = sw.alpha ?? Math.max(0, 1 - sw.radius / sw.maxR);
+    const [cr, cg, cb] = sw.color;
+    const r = sw.radius;
+    // 外层光晕（用多条宽度不同的半透明描边模拟渐变，避免 createRadialGradient）
+    ctx.beginPath();
+    ctx.arc(sw.x, sw.y, r, 0, Math.PI * 2);
+    ctx.strokeStyle = `rgba(${cr},${cg},${cb},${(Math.round(alpha * 45) / 100)})`;
+    ctx.lineWidth = 5 + alpha * 4;
+    ctx.stroke();
+    // 内圈亮线
+    if (r > 2) {
+      ctx.beginPath();
+      ctx.arc(sw.x, sw.y, Math.max(1, r - 3), 0, Math.PI * 2);
+      ctx.strokeStyle = `rgba(255,255,255,${(Math.round(alpha * 35) / 100)})`;
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+    }
+  }
+}
+
+function destroyBubble(bubble, userTriggered = false) {
+  if (!bubble.alive) return;
+  bubble.alive = false;
+  state.aliveCount--;
+  const [cr,cg,cb] = hRGB(bubble.color);
+  const count = CONFIG.FINGER_BURST_PARTICLES;
+  // 性能保护：超过上限时放弃生成粒子
+  if (particles.length < MAX_PARTICLES) {
+    for (let i = 0; i < count; i++) {
+      const angle = (i / count) * Math.PI * 2 + rand(-0.3, 0.3);
+      const speed = rand(1.5, 4.5);
+      particles.push({
+        x: bubble.x, y: bubble.y,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed - 1,
+        life: 1.0, decay: rand(0.02, 0.05),
+        size: rand(3, 7), cr, cg, cb
+      });
+    }
+  }
+
+  // 震荡波（限制同时存在数量，防止性能雪崩）
+  const MAX_SHOCKWAVES = 5;
+  if (state.shockwaves.length >= MAX_SHOCKWAVES) {
+    state.shockwaves.shift();   // 移除最早的
+  }
+  const sw = {
+    x: bubble.x, y: bubble.y,
+    radius: bubble.baseRadius * 0.3,
+    alpha: 1,
+    born: performance.now(),
+    maxR: CONFIG.SHOCKWAVE_MAX_RADIUS,
+    duration: CONFIG.SHOCKWAVE_DURATION,
+    force: CONFIG.SHOCKWAVE_FORCE,
+    color: [cr, cg, cb]
+  };
+  // 物理推力：创建时一次性施加（从每帧双重循环 → 单次计算）
+  applyShockwavePhysicsOnce(sw);
+  state.shockwaves.push(sw);
+
+  // 主动戳破 → 出答案
+  if (userTriggered) {
+    setTimeout(() => spawnAnswerCard(bubble.x, bubble.y), 250);
+  }
+}
+
+// ============================================================
+//  答案卡片系统
+// ============================================================
+function spawnAnswerCard(x, y) {
+  // 卡片上限：防止 DOM 雪崩
+  const existingCards = document.querySelectorAll('.answer-card:not(.dismiss)');
+  if (existingCards.length >= CONFIG.ANSWER_CARD_MAX) {
+    // 移除最旧的卡片
+    dismissCard(existingCards[0]);
+  }
+
+  const container = document.getElementById('answers-container');
+  const answer = getRandomAnswer();
+  const questionText = document.getElementById('question-input').value.trim();
+
+  // 边界限制：确保卡片不会超出屏幕
+  const cardW = 280, cardH = 200; // 预估尺寸
+  const cx = Math.max(cardW/2 + 10, Math.min(x, state.canvasW - cardW/2 - 10));
+  const cy = Math.max(cardH/2 + 10, Math.min(y, state.canvasH - cardH/2 - 10));
+
+  const card = document.createElement('div');
+  card.className = 'answer-card';
+  card.style.left = cx + 'px';
+  card.style.top = cy + 'px';
+  card.dataset.id = ++answerCardId;
+  card.dataset.born = performance.now();
+
+  let contentHTML = '';
+  if (answer.type === 'image') {
+    contentHTML = `<img src="${escapeHTML(answer.content)}" alt="答案图片" onerror="this.outerHTML='<span style=color:#f08080>图片加载失败</span>'">`;
+  } else {
+    contentHTML = `<span class="answer-content">${escapeHTML(answer.content)}</span>`;
+  }
+
+  card.innerHTML = `<div class="answer-card-inner">
+    ${questionText ? `<div class="answer-question">你问：${escapeHTML(questionText)}</div>` : ''}
+    ${contentHTML}
+    <div class="answer-tip">点击关闭</div>
+  </div>`;
+
+  // 点击关闭
+  card.addEventListener('pointerdown', (e) => {
+    e.stopPropagation();
+    dismissCard(card);
+  });
+
+  container.appendChild(card);
+
+  // 延迟触发入场动画
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => card.classList.add('show'));
+  });
+}
+
+function escapeHTML(str) {
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+
+function dismissCard(card) {
+  if (card.classList.contains('dismiss')) return;
+  card.classList.add('dismiss');
+  setTimeout(() => {
+    if (card.parentNode) card.parentNode.removeChild(card);
+  }, 500);
+}
+
+function cleanupAnswerCards(now) {
+  const MAX_AGE = 5000; // 5秒自动消失
+  const cards = document.querySelectorAll('.answer-card');
+  cards.forEach(card => {
+    const born = parseFloat(card.dataset.born);
+    if (now - born > MAX_AGE) {
+      dismissCard(card);
+    }
+  });
+}
+
+// ============================================================
+//  答案库编辑器
+// ============================================================
+const editorOverlay = document.getElementById('editor-overlay');
+const editorList = document.getElementById('editor-list');
+const editorClose = document.getElementById('editor-close');
+const editorAddBtn = document.getElementById('editor-add-btn');
+const editorTypeSelect = document.getElementById('editor-type-select');
+const editorContentInput = document.getElementById('editor-content-input');
+
+function openEditor() {
+  renderEditorList();
+  editorOverlay.classList.add('open');
+}
+function closeEditor() {
+  editorOverlay.classList.remove('open');
+}
+
+function renderEditorList() {
+  editorList.innerHTML = '';
+  if (answerLibrary.length === 0) {
+    editorList.innerHTML = '<div style="text-align:center;color:rgba(200,210,235,0.4);padding:20px;font-size:13px;">答案库为空，添加第一条答案吧！</div>';
+    return;
+  }
+  answerLibrary.forEach((item, index) => {
+    const div = document.createElement('div');
+    div.className = 'editor-answer-item';
+    div.innerHTML = `
+      <span class="editor-answer-type ${item.type}">${item.type === 'text' ? '文字' : '图片'}</span>
+      <span class="editor-answer-preview" title="${escapeHTML(item.content)}">${escapeHTML(item.content)}</span>
+      <button class="editor-answer-delete" data-index="${index}" title="删除">✕</button>
+    `;
+    div.querySelector('.editor-answer-delete').addEventListener('click', () => removeAnswer(index));
+    editorList.appendChild(div);
+  });
+}
+
+function addAnswer() {
+  const type = editorTypeSelect.value;
+  const content = editorContentInput.value.trim();
+  if (!content) return;
+
+  answerLibrary.push({ type, content });
+  editorContentInput.value = '';
+  renderEditorList();
+  saveAnswersToStorage();
+}
+
+function removeAnswer(index) {
+  answerLibrary.splice(index, 1);
+  renderEditorList();
+  saveAnswersToStorage();
+}
+
+function saveAnswersToStorage() {
+  try {
+    localStorage.setItem('bubble-answer-library', JSON.stringify(answerLibrary));
+  } catch(e) {}
+}
+
+function loadAnswersFromStorage() {
+  try {
+    const saved = localStorage.getItem('bubble-answer-library');
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        answerLibrary = parsed;
+        return;
+      }
+    }
+  } catch(e) {}
+  // 使用默认答案库
+  answerLibrary = JSON.parse(JSON.stringify(DEFAULT_ANSWERS));
+}
+
+// 编辑器事件绑定
+editorClose.addEventListener('click', closeEditor);
+editorOverlay.addEventListener('click', (e) => {
+  if (e.target === editorOverlay) closeEditor();
+});
+editorAddBtn.addEventListener('click', addAnswer);
+editorContentInput.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') addAnswer();
+});
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && editorOverlay.classList.contains('open')) closeEditor();
+});
+
+// 问题输入
+const questionInput = document.getElementById('question-input');
+const questionSubmit = document.getElementById('question-submit');
+
+questionSubmit.addEventListener('click', () => {
+  // 提交问题 → 显示一个提示，实际答案在戳破泡泡时出现
+  if (questionInput.value.trim()) {
+    // 可选：给用户一个即时反馈
+    const tip = document.createElement('div');
+    tip.style.cssText = 'position:fixed;top:80px;left:50%;transform:translateX(-50%);z-index:85;background:rgba(10,20,50,0.7);color:#d8e0f8;padding:8px 20px;border-radius:20px;font-size:13px;backdrop-filter:blur(10px);pointer-events:none;transition:opacity 0.5s;';
+    tip.textContent = '💭 戳破一个泡泡来获取答案吧！';
+    document.body.appendChild(tip);
+    setTimeout(() => { tip.style.opacity = '0'; setTimeout(() => tip.remove(), 500); }, 2000);
+  }
+});
+questionInput.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') questionSubmit.click();
+});
+
+// 编辑按钮
+document.getElementById('edit-answers-btn').addEventListener('click', openEditor);
+
+// ============================================================
+//  问题栏隐藏/显示
+// ============================================================
+const questionBar = document.getElementById('question-bar');
+const questionBarHideBtn = document.getElementById('question-bar-hide-btn');
+const questionBarToggle = document.getElementById('question-bar-toggle');
+
+function hideQuestionBar() {
+  questionBar.classList.add('collapsed');
+  questionBarToggle.classList.add('visible');
+}
+function showQuestionBar() {
+  questionBar.classList.remove('collapsed');
+  questionBarToggle.classList.remove('visible');
+  questionInput.focus();
+}
+questionBarHideBtn.addEventListener('click', hideQuestionBar);
+questionBarToggle.addEventListener('click', showQuestionBar);
+
+// ============================================================
+//  返回首页按钮
+// ============================================================
+const backToStartBtn = document.getElementById('back-to-start-btn');
+
+function goBackToStartScreen() {
+  // 重建开始界面（如果之前被移除）
+  const existing = document.getElementById('start-screen');
+  if (existing) {
+    existing.classList.remove('hidden');
+    existing.style.opacity = '1';
+    existing.style.transform = 'scale(1)';
+    existing.style.pointerEvents = 'auto';
+    // 重置并重新聚焦
+    const si = document.getElementById('start-input');
+    if (si) { si.value = ''; setTimeout(() => si.focus(), 300); }
+    return;
+  }
+  // 如果开始界面已被移除，刷新页面
+  location.reload();
+}
+
+// 鼠标点击返回
+backToStartBtn.addEventListener('click', goBackToStartScreen);
+
+// ============================================================
+//  主循环
+// ============================================================
+let lastTime = 0;
+
+function gameLoop(ts) {
+  try {
+    if (lastTime === 0) lastTime = ts;
+    const dt = Math.min((ts - lastTime) / 16.667, 3);
+    lastTime = ts;
+    state.frameCount++;
+
+    // 补充
+    if (ts - state.lastReplenish >= CONFIG.REPLENISH_DELAY) {
+      if (state.aliveCount < CONFIG.MIN_COUNT) spawnBubble();
+      state.lastReplenish = ts;
+    }
+
+    // 生长
+    if (ts - state.lastGrowthTime >= CONFIG.GROWTH_INTERVAL) {
+      for (const b of state.bubbles) {
+        if (!b.alive) continue;
+        b.baseRadius += 1;
+        if (b.baseRadius > CONFIG.BURST_RADIUS) destroyBubble(b);
+      }
+      state.lastGrowthTime = ts;
+    }
+
+    // 定期清理死泡泡（每20帧）
+    if (state.frameCount % 20 === 0) {
+      state.bubbles = state.bubbles.filter(b => b.alive);
+    }
+
+    // 捏合手势生成泡泡
+    if (state.pendingPinchSpawn) {
+      state.pendingPinchSpawn = false;
+      spawnPinchBubble(ts);
+    }
+
+    applyPhysics(dt);
+    applyFingerInteraction(ts);
+    applyMouseInteraction();
+    updateShockwaves(ts);
+
+    // 清理过期答案卡片（每30帧）
+    if (state.frameCount % 30 === 0) cleanupAnswerCards(ts);
+
+    render(ts);
+
+    requestAnimationFrame(gameLoop);
+  } catch(e) {
+    console.error('Game loop crash v9.46:', e.message, e);
+    // ===== 全面状态恢复 =====
+    // 0. 先恢复 Canvas 状态：崩溃可能发生在 save/restore 之间
+    try {
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.shadowColor = 'transparent';
+      ctx.shadowBlur = 0;
+      ctx.lineCap = 'butt';
+      ctx.setLineDash([]);
+    } catch(_) {}
+    // 1. 清除所有视觉特效
+    state.shockwaves.length = 0;
+    particles.length = 0;
+    // 2. 重置所有泡泡为干净状态，无法恢复的标记死亡
+    for (const b of state.bubbles) {
+      if (!b.alive) continue;
+      // 检查物理属性是否已损坏
+      if (isNaN(b.x) || isNaN(b.y) || isNaN(b.vx) || isNaN(b.vy) ||
+          isNaN(b.baseRadius) || b.baseRadius <= 0 || b.baseRadius > 300 ||
+          !isFinite(b.x) || !isFinite(b.y)) {
+        b.alive = false;
+        continue;
+      }
+      // 重置速度和形变
+      b.vx = 0; b.vy = 0;
+      b.vvels.fill(0);
+      const R = b.baseRadius;
+      for (let i = 0; i < NV; i++) {
+        b.verts[i*2]   = b.rcos[i] * R;
+        b.verts[i*2+1] = b.rsin[i] * R;
+      }
+      // 重置手势状态
+      b.fingerContactStart = 0;
+      b.fingerHolding = false;
+      b.fingerProgress = 0;
+    }
+    // 3. 清理死泡泡并重新计数
+    state.bubbles = state.bubbles.filter(b => b.alive);
+    state.aliveCount = state.bubbles.length;
+    // 4. 重置鼠标/手势状态
+    state.mouseOnCanvas = false;
+    state.mouseX = -9999; state.mouseY = -9999;
+    state.backBtnHolding = false;
+    state.backBtnHoldStart = 0;
+    state.backBtnProgress = 0;
+    // 5. 强制背景重绘
+    bgCacheDirty = true;
+    // 6. 恢复循环（时间戳重置避免 dt 爆炸）
+    lastTime = ts;
+    requestAnimationFrame(gameLoop);
+  }
+}
+
+// ============================================================
+//  交互（鼠标点击破裂 + 鼠标触碰形变）
+// ============================================================
+canvas.addEventListener('pointerdown', (e) => {
+  const x = e.clientX, y = e.clientY;
+  for (const b of state.bubbles) {
+    if (!b.alive) continue;
+    const dx = b.x-x, dy = b.y-y;
+    if (dx*dx + dy*dy < b.baseRadius*b.baseRadius) {
+      destroyBubble(b, true); break;
+    }
+  }
+});
+
+canvas.addEventListener('pointermove', (e) => {
+  state.mouseX = e.clientX;
+  state.mouseY = e.clientY;
+  state.mouseOnCanvas = true;
+});
+
+canvas.addEventListener('pointerleave', () => {
+  state.mouseOnCanvas = false;
+  state.mouseX = -9999;
+  state.mouseY = -9999;
+});
+
+// ============================================================
+//  面板
+// ============================================================
+document.getElementById('count-slider').addEventListener('input', function() {
+  CONFIG.MIN_COUNT = parseInt(this.value);
+  document.getElementById('count-display').textContent = CONFIG.MIN_COUNT;
+});
+document.getElementById('minr-slider').addEventListener('input', function() {
+  CONFIG.MIN_RADIUS = parseInt(this.value);
+  document.getElementById('minr-display').textContent = CONFIG.MIN_RADIUS;
+});
+document.getElementById('maxr-slider').addEventListener('input', function() {
+  CONFIG.MAX_RADIUS = parseInt(this.value);
+  document.getElementById('maxr-display').textContent = CONFIG.MAX_RADIUS;
+});
+
+document.getElementById('panel-toggle').addEventListener('click', () => {
+  document.getElementById('panel').classList.toggle('collapsed');
+});
+
+// ============================================================
+//  开始界面
+// ============================================================
+(function initStartScreen() {
+  const startScreen = document.getElementById('start-screen');
+  const startInput = document.getElementById('start-input');
+  const startBtn = document.getElementById('start-btn');
+  const questionInput = document.getElementById('question-input');
+  const starsContainer = document.getElementById('start-stars');
+  const decoContainer = document.getElementById('start-deco-bubbles');
+
+  // 生成星空粒子
+  for (let i = 0; i < 80; i++) {
+    const star = document.createElement('div');
+    star.className = 'star';
+    const size = Math.random() * 2.5 + 1;
+    star.style.cssText = `
+      width:${size}px;height:${size}px;
+      top:${Math.random()*100}%;left:${Math.random()*100}%;
+      --dur:${Math.random()*3+2}s;--delay:${Math.random()*3}s;
+    `;
+    starsContainer.appendChild(star);
+  }
+
+  // 流动光斑
+  for (let i = 0; i < 3; i++) {
+    const orb = document.createElement('div');
+    orb.className = 'orb';
+    const colors = ['rgba(100,160,240,0.12)','rgba(180,120,220,0.10)','rgba(120,200,200,0.09)'];
+    const sizes = [280,220,250];
+    orb.style.cssText = `
+      width:${sizes[i]}px;height:${sizes[i]}px;
+      top:${30+i*20}%;left:${20+i*25}%;
+      background:${colors[i]};
+      --dur:${8+i*2}s;
+      --dx1:${(Math.random()-0.5)*80}px;--dy1:${(Math.random()-0.5)*60}px;
+      --dx2:${(Math.random()-0.5)*100}px;--dy2:${(Math.random()-0.5)*80}px;
+      --dx3:${(Math.random()-0.5)*70}px;--dy3:${(Math.random()-0.5)*70}px;
+    `;
+    startScreen.appendChild(orb);
+  }
+
+  // 装饰泡泡
+  for (let i = 0; i < 12; i++) {
+    const bub = document.createElement('div');
+    bub.className = 'deco-bubble';
+    const size = Math.random() * 70 + 30;
+    bub.style.cssText = `
+      width:${size}px;height:${size}px;
+      top:${Math.random()*90}%;left:${Math.random()*90}%;
+      --dur:${Math.random()*6+6}s;--delay:${Math.random()*5}s;
+      --dx:${(Math.random()-0.5)*40}px;--dy:${(Math.random()-0.5)*50}px;
+    `;
+    decoContainer.appendChild(bub);
+  }
+
+  // 启动函数：隐藏开始界面，启动泡泡程序
+  function dismissStartScreen() {
+    const q = startInput.value.trim();
+    if (q) {
+      // 将问题同步到顶部问题栏
+      questionInput.value = q;
+    }
+    // 先开始泡泡程序（让背景在下面渲染）
+    loadAnswersFromStorage();
+    initBubbles();
+    requestAnimationFrame(gameLoop);
+    // 延迟启动追踪
+    setTimeout(() => initHandTracking(), 500);
+    // 渐隐开始界面
+    startScreen.classList.add('hidden');
+    // 动画结束后从DOM移除
+    setTimeout(() => {
+      if (startScreen.parentNode) startScreen.parentNode.removeChild(startScreen);
+    }, 800);
+    console.log('泡泡交互程序 v9.46 已启动（全面防崩溃版）');
+  }
+
+  // 绑定事件
+  startBtn.addEventListener('click', dismissStartScreen);
+  startInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') dismissStartScreen();
+  });
+
+  // 自动聚焦输入框
+  setTimeout(() => startInput.focus(), 300);
+})();
+
+// ============================================================
+//  原来的启动已移至 dismissStartScreen 中
+// ============================================================
+</script>
+</body>
+</html>
